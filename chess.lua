@@ -105,7 +105,7 @@ MoveDisplay.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MoveDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
 MoveDisplay.TextScaled = true
 
--- Dragging Core Configuration
+-- Dragging Core System
 local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
@@ -120,7 +120,7 @@ end)
 MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
 UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
 
--- Minimize Controller Loop
+-- Minimize Button Loop
 local isMinimised = false
 ToggleSizeButton.MouseButton1Click:Connect(function()
     isMinimised = not isMinimised
@@ -175,12 +175,17 @@ local function clearOldHighlights()
     activeHighlights = {}
 end
 
+-- 🎯 FINISHED OVERLAY ENGINE
 local function applyVisualHighlight(tileName, highlightColor)
-    local matchGrid = game.Workspace:FindFirstChild("Board") or game.Workspace:FindFirstChild("ChessBoard") or game.Workspace
-    for _, descendant in pairs(matchGrid:GetDescendants()) do
-        if descendant:IsA("BasePart") and string.lower(descendant.Name) == string.lower(tileName) then
+    -- Cookie Development chess board parts mapping handler
+    local board = game.Workspace:FindFirstChild("Board") or game.Workspace:FindFirstChild("ChessBoard")
+    if not board then return end
+    
+    -- Searches the physical 3D grid folder for names matching algebraic notation
+    for _, tile in pairs(board:GetDescendants()) do
+        if tile:IsA("BasePart") and string.lower(tile.Name) == string.lower(tileName) then
             local hl = Instance.new("Highlight")
-            hl.Parent = descendant
+            hl.Parent = tile
             hl.FillColor = highlightColor
             hl.FillOpacity = 0.5
             hl.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -190,63 +195,58 @@ local function applyVisualHighlight(tileName, highlightColor)
     end
 end
 
+-- 🛠️ ACTIVE WORKSPACE SCANNER MATRIX
 local function generateCurrentFEN()
-    local matchGrid = game.Workspace:FindFirstChild("Board") or game.Workspace:FindFirstChild("ChessBoard")
-    if not matchGrid then return nil end
-    return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    local board = game.Workspace:FindFirstChild("Board") or game.Workspace:FindFirstChild("ChessBoard")
+    if not board then return nil end
+    
+    local rows = {"8", "7", "6", "5", "4", "3", "2", "1"}
+    local cols = {"a", "b", "c", "d", "e", "f", "g", "h"}
+    local fenRows = {}
+    
+    -- Loops through rows and columns to find active pieces sits on squares
+    for _, row in ipairs(rows) do
+        local currentRowText = ""
+        local emptyCount = 0
+        
+        for _, col in ipairs(cols) do
+            local squareName = col .. row
+            local squarePart = board:FindFirstChild(squareName)
+            local piece = squarePart and squarePart:FindFirstChild("Piece") -- Adjust based on exact attachment key
+            
+            if piece then
+                if emptyCount > 0 then
+                    currentRowText = currentRowText .. tostring(emptyCount)
+                    emptyCount = 0
+                end
+                -- Map specific string models to FEN shorthand
+                local name = string.lower(piece.Value)
+                local isWhite = piece:FindFirstChild("IsWhite") and piece.IsWhite.Value
+                local letter = "p"
+                if string.find(name, "rook") then letter = "r"
+                elseif string.find(name, "knight") then letter = "n"
+                elseif string.find(name, "bishop") then letter = "b"
+                elseif string.find(name, "queen") then letter = "q"
+                elseif string.find(name, "king") then letter = "k" end
+                
+                currentRowText = currentRowText .. (isWhite and string.upper(letter) or letter)
+            else
+                emptyCount = emptyCount + 1
+            end
+        end
+        
+        if emptyCount > 0 then
+            currentRowText = currentRowText .. tostring(emptyCount)
+        end
+        table.insert(fenRows, currentRowText)
+    end
+    
+    local fenString = table.concat(fenRows, "/")
+    -- Appends tracking values: Active side turn w=white, black=b
+    return fenString .. " w KQkq - 0 1" 
 end
 
 local function executeAutonomousMove(fromSquare, toSquare)
     local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") or game:GetService("ReplicatedStorage")
     local moveEvent = remotes:FindFirstChild("MovePiece") or remotes:FindFirstChild("SubmitMove")
     if moveEvent and moveEvent:IsA("RemoteEvent") then
-        moveEvent:FireServer(fromSquare, toSquare)
-    end
-end
-
-local function getStockfishAdvice(fen, targetDepth)
-    local apiUrl = "https://stockfish.online" .. HttpService:UrlEncode(fen) .. "&depth=" .. targetDepth
-    local success, response = pcall(function() return game:HttpGet(apiUrl) end)
-    if success and response then
-        local data = HttpService:JSONDecode(response)
-        if data and data.bestmove then return string.split(data.bestmove, " ") or data.bestmove end
-    end
-    return "API Error"
-end
-
-ActionButton.MouseButton1Click:Connect(function()
-    clearOldHighlights()
-    local currentPosition = generateCurrentFEN()
-    local chosenDepth = levels[currentLevelIdx].depth
-    
-    if not currentPosition then
-        MoveDisplay.Text = "Sit At Table"
-        return
-    end
-    
-    if safetyDelayEnabled then
-        local delayTime = math.random(3, 4)
-        MoveDisplay.Text = "Wait (" .. delayTime .. "s)..."
-        task.wait(delayTime)
-    else
-        MoveDisplay.Text = "Scanning..."
-    end
-    
-    local recommendedMove = getStockfishAdvice(currentPosition, chosenDepth)
-    
-    if recommendedMove and #recommendedMove >= 4 and not string.find(recommendedMove, "Error") and not string.find(recommendedMove, "API") then
-        local fromSquare = string.sub(recommendedMove, 1, 2)
-        local toSquare = string.sub(recommendedMove, 3, 4)
-        
-        MoveDisplay.Text = string.upper(fromSquare) .. " ➔ " .. string.upper(toSquare)
-        
-        if autoMoveEnabled then
-            executeAutonomousMove(fromSquare, toSquare)
-        else
-            applyVisualHighlight(fromSquare, Color3.fromRGB(255, 140, 0))
-            applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 100))
-        end
-    else
-        MoveDisplay.Text = "Sit At Table"
-    end
-end)
