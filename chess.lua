@@ -1,4 +1,3 @@
-lua-- Delta Custom Hybrid Chess Advisor & Auto-Player
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
