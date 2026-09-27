@@ -20,7 +20,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 230, 0, 260) -- Extended box parameters to fit toggles
+MainFrame.Size = UDim2.new(0, 230, 0, 260) -- Extended parameters to fit all toggles
 MainFrame.Active = true
 
 local Title = Instance.new("TextLabel")
@@ -102,7 +102,6 @@ MoveDisplay.Size = UDim2.new(0.9, 0, 0.16, 0)
 MoveDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MoveDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
 MoveDisplay.TextScaled = true
-
 -- 🚀 High-Precision Mobile Drag System
 local dragging, dragInput, dragStart, startPos
 local function update(input)
@@ -170,7 +169,6 @@ local function clearOldHighlights()
 end
 
 local function applyVisualHighlight(tileName, highlightColor)
-    -- Cookie Development clones boards dynamically inside Workspace. Here we trace descendants directly.
     for _, item in pairs(game.Workspace:GetDescendants()) do
         if item:IsA("BasePart") and string.lower(item.Name) == string.lower(tileName) then
             local hl = Instance.new("Highlight")
@@ -184,10 +182,9 @@ local function applyVisualHighlight(tileName, highlightColor)
     end
 end
 
--- 🔍 INTUITIVE BOARD DETECTOR MATRIX
+-- 🔍 AUTOMATED COOKIE BOARD DISCOVERY MATRIX
 local function findActiveCookieBoard()
     for _, obj in pairs(game.Workspace:GetDescendants()) do
-        -- Traces instances named 'Board' or 'Chess' that hold multiple component tiles
         if (string.find(string.lower(obj.Name), "board") or string.find(string.lower(obj.Name), "chess")) and not obj:IsA("BasePart") then
             if #obj:GetChildren() > 10 then
                 return obj
@@ -200,7 +197,6 @@ end
 local function generateCurrentFEN()
     local targetBoard = findActiveCookieBoard()
     if not targetBoard then return nil end
-    -- Resolves structure tracking to pass live layouts to Stockfish
     return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 end
 
@@ -247,3 +243,15 @@ ActionButton.MouseButton1Click:Connect(function()
         local fromSquare = string.sub(recommendedMove, 1, 2)
         local toSquare = string.sub(recommendedMove, 3, 4)
         
+        MoveDisplay.Text = "Move: " .. string.upper(fromSquare) .. " ➔ " .. string.upper(toSquare)
+        
+        if autoMoveEnabled then
+            executeAutonomousMove(fromSquare, toSquare)
+        else
+            applyVisualHighlight(fromSquare, Color3.fromRGB(255, 140, 0))
+            applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 100))
+        end
+    else
+        MoveDisplay.Text = "Error Processing Grid"
+    end
+end)
