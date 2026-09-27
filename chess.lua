@@ -1,15 +1,15 @@
--- Delta Fixed Multi-Engine Universal Chess Advisor
+-- Delta Custom Hybrid Chess Advisor & Auto-Player
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Force Clear Any Glitched Screen Interferences
+-- Force Clear Any Pre-Existing UI Elements Safely
 if game.CoreGui:FindFirstChild("CyberChessScreen") then
     game.CoreGui.CyberChessScreen:Destroy()
 end
 
--- GUI Interface Canvas Generation
+-- GUI Interface Initialization (Classic Vertical Box)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CyberChessScreen"
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -20,7 +20,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 230, 0, 260)
+MainFrame.Size = UDim2.new(0, 230, 0, 260) 
 MainFrame.Active = true
 
 local Title = Instance.new("TextLabel")
@@ -62,7 +62,7 @@ local levels = {
     {name = "Grandmaster (2500 Elo)", depth = 13},
     {name = "Maximum (3000+ Elo)", depth = 17}
 }
-local currentLevelIdx = 1
+local currentLevelIdx = 2
 local safetyDelayEnabled = true
 local autoMoveEnabled = false
 
@@ -100,7 +100,7 @@ MoveDisplay.Size = UDim2.new(0.9, 0, 0.16, 0)
 MoveDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MoveDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
 MoveDisplay.TextScaled = true
--- Touch-Drag Controller Calculus
+-- Touch Dragger Calculus
 local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
@@ -163,9 +163,7 @@ local function clearOldHighlights()
     activeHighlights = {}
 end
 
--- 🛠️ DEEP RECURSIVE OVERLAY SEARCH
 local function applyVisualHighlight(tileName, highlightColor)
-    -- Scans all workspace nodes broadly to find pieces matching algebraic parameters
     for _, part in pairs(game.Workspace:GetDescendants()) do
         if part:IsA("BasePart") and string.lower(part.Name) == string.lower(tileName) then
             local hl = Instance.new("Highlight")
@@ -179,9 +177,61 @@ local function applyVisualHighlight(tileName, highlightColor)
     end
 end
 
-local function generateCurrentFEN()
-    -- Deep search fallback ensures calculation layers sync regardless of folder naming structures
-    return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+-- 🛠️ DYNAMIC SCANNED CONVERSION LOOP FOR COOKIE DEVELOPMENT CHESS
+local function generateLiveCookieFEN()
+    local rows = {"8", "7", "6", "5", "4", "3", "2", "1"}
+    local cols = {"a", "b", "c", "d", "e", "f", "g", "h"}
+    local fenRows = {}
+    
+    -- Scans all components across active table modules dynamically
+    for _, row in ipairs(rows) do
+        local currentRowText = ""
+        local emptyCount = 0
+        for _, col in ipairs(cols) do
+            local squareName = col .. row
+            local matchTile = nil
+            
+            for _, item in pairs(game.Workspace:GetDescendants()) do
+                if item:IsA("BasePart") and string.lower(item.Name) == squareName then
+                    matchTile = item
+                    break
+                end
+            end
+            
+            local modelPiece = matchTile and matchTile:FindFirstChildOfClass("Model") or (matchTile and matchTile:FindFirstChild("Piece"))
+            if modelPiece then
+                if emptyCount > 0 then
+                    currentRowText = currentRowText .. tostring(emptyCount)
+                    emptyCount = 0
+                end
+                
+                local name = string.lower(modelPiece.Name)
+                local letter = "p"
+                if string.find(name, "rook") or string.find(name, "tower") then letter = "r"
+                elseif string.find(name, "knight") or string.find(name, "horse") then letter = "n"
+                elseif string.find(name, "bishop") then letter = "b"
+                elseif string.find(name, "queen") then letter = "q"
+                elseif string.find(name, "king") then letter = "k" end
+                
+                -- Determine team coloration via standard property tags
+                local isWhite = modelPiece:FindFirstChild("White") or string.find(name, "white")
+                currentRowText = currentRowText .. (isWhite and string.upper(letter) or letter)
+            else
+                emptyCount = emptyCount + 1
+            end
+        end
+        if emptyCount > 0 then currentRowText = currentRowText .. tostring(emptyCount) end
+        table.insert(fenRows, currentRowText)
+    end
+    return table.concat(fenRows, "/") .. " w KQkq - 0 1"
+end
+
+local function executeAutonomousMove(fromSquare, toSquare)
+    local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") or game:GetService("ReplicatedStorage")
+    local moveEvent = remotes:FindFirstChild("MovePiece") or remotes:FindFirstChild("SubmitMove")
+    if moveEvent and moveEvent:IsA("RemoteEvent") then
+        moveEvent:FireServer(fromSquare, toSquare)
+    end
 end
 
 local function getStockfishAdvice(fen, targetDepth)
@@ -196,15 +246,16 @@ end
 
 ActionButton.MouseButton1Click:Connect(function()
     clearOldHighlights()
-    local currentPosition = generateCurrentFEN()
+    MoveDisplay.Text = "Scanning Board Matrix..."
+    task.wait(0.5)
+    
+    local currentPosition = generateLiveCookieFEN()
     local chosenDepth = levels[currentLevelIdx].depth
     
     if safetyDelayEnabled then
         local delayTime = math.random(3, 4)
-        MoveDisplay.Text = "Evaluating Grid (" .. delayTime .. "s)..."
+        MoveDisplay.Text = "Evaluating (" .. delayTime .. "s)..."
         task.wait(delayTime)
-    else
-        MoveDisplay.Text = "Calculating..."
     end
     
     local recommendedMove = getStockfishAdvice(currentPosition, chosenDepth)
@@ -213,9 +264,13 @@ ActionButton.MouseButton1Click:Connect(function()
         local toSquare = string.sub(recommendedMove, 3, 4)
         
         MoveDisplay.Text = "Move: " .. string.upper(fromSquare) .. " ➔ " .. string.upper(toSquare)
-        applyVisualHighlight(fromSquare, Color3.fromRGB(255, 140, 0))
-        applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 100))
+        if autoMoveEnabled then
+            executeAutonomousMove(fromSquare, toSquare)
+        else
+            applyVisualHighlight(fromSquare, Color3.fromRGB(255, 140, 0))
+            applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 100))
+        end
     else
-        MoveDisplay.Text = "Calculation Fail"
+        MoveDisplay.Text = "Calculation Fault"
     end
 end)
