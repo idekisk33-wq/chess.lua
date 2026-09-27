@@ -1,15 +1,15 @@
--- Delta Custom Hybrid Chess Advisor & Auto-Player
+-- Delta Fixed Multi-Engine Universal Chess Advisor
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Force Clear Any Pre-Existing UI Elements Safely
+-- Force Clear Any Glitched Screen Interferences
 if game.CoreGui:FindFirstChild("CyberChessScreen") then
     game.CoreGui.CyberChessScreen:Destroy()
 end
 
--- GUI Interface Initialization (Classic Vertical Box)
+-- GUI Interface Canvas Generation
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CyberChessScreen"
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -20,7 +20,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 230, 0, 260) 
+MainFrame.Size = UDim2.new(0, 230, 0, 260)
 MainFrame.Active = true
 
 local Title = Instance.new("TextLabel")
@@ -100,7 +100,7 @@ MoveDisplay.Size = UDim2.new(0.9, 0, 0.16, 0)
 MoveDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MoveDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
 MoveDisplay.TextScaled = true
--- Touch Dragger Calculus
+-- Touch-Drag Controller Calculus
 local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
@@ -157,65 +157,61 @@ ToggleSizeButton.MouseButton1Click:Connect(function()
     end
 end)
 
+-- 🎯 FIXED COOKIE DEVELOPMENT VISUAL CORE OVERLAYS
 local activeHighlights = {}
 local function clearOldHighlights()
-    for _, hl in pairs(activeHighlights) do if hl then hl:Destroy() end end
-    activeHighlights = {}
-end
-
-local function applyVisualHighlight(tileName, highlightColor)
-    for _, part in pairs(game.Workspace:GetDescendants()) do
-        if part:IsA("BasePart") and string.lower(part.Name) == string.lower(tileName) then
-            local hl = Instance.new("Highlight")
-            hl.Parent = part
-            hl.FillColor = highlightColor
-            hl.FillOpacity = 0.5
-            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-            hl.OutlineOpacity = 0.8
-            table.insert(activeHighlights, hl)
+    local board_model = game.Workspace:FindFirstChild("Board")
+    if not board_model then return end
+    for _, v in pairs(board_model:GetChildren()) do
+        for _, h in pairs(v:GetChildren()) do
+            if h:IsA("Highlight") then h:Destroy() end
         end
     end
 end
 
--- 🛠️ DYNAMIC SCANNED CONVERSION LOOP FOR COOKIE DEVELOPMENT CHESS
+local function applyVisualHighlight(xCoord, yCoord, highlightColor)
+    local board_model = game.Workspace:FindFirstChild("Board")
+    if not board_model then return end
+    local tile_name = tostring(xCoord) .. "," .. tostring(yCoord)
+    local target_tile = board_model:FindFirstChild(tile_name)
+    if target_tile then
+        local hl = Instance.new("Highlight")
+        hl.Parent = target_tile
+        hl.FillColor = highlightColor
+        hl.FillOpacity = 0.5
+        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+        hl.OutlineOpacity = 0.9
+    end
+end
+
+-- 🛠️ GARBAGE COLLECTION VIRTUAL ENGINE HOOKS
+local function getActiveGameMemory()
+    for _, v in pairs(getgc(true)) do
+        if type(v) == "table" and rawget(v, "activeTeam") and rawget(v, "contents") and rawget(v, "tiles") then
+            return v
+        end
+    end
+    return nil
+end
+
+local piece_map = { Pawn="p", Knight="n", Bishop="b", Rook="r", Queen="q", King="k" }
+
 local function generateLiveCookieFEN()
-    local rows = {"8", "7", "6", "5", "4", "3", "2", "1"}
-    local cols = {"a", "b", "c", "d", "e", "f", "g", "h"}
+    local current_board = getActiveGameMemory()
+    if not current_board then return nil end
     local fenRows = {}
-    
-    -- Scans all components across active table modules dynamically
-    for _, row in ipairs(rows) do
+    for y = 8, 1, -1 do
         local currentRowText = ""
         local emptyCount = 0
-        for _, col in ipairs(cols) do
-            local squareName = col .. row
-            local matchTile = nil
-            
-            for _, item in pairs(game.Workspace:GetDescendants()) do
-                if item:IsA("BasePart") and string.lower(item.Name) == squareName then
-                    matchTile = item
-                    break
-                end
-            end
-            
-            local modelPiece = matchTile and matchTile:FindFirstChildOfClass("Model") or (matchTile and matchTile:FindFirstChild("Piece"))
-            if modelPiece then
+        for x = 8, 1, -1 do
+            local piece = current_board.contents[1][x][y]
+            if piece then
                 if emptyCount > 0 then
                     currentRowText = currentRowText .. tostring(emptyCount)
                     emptyCount = 0
                 end
-                
-                local name = string.lower(modelPiece.Name)
-                local letter = "p"
-                if string.find(name, "rook") or string.find(name, "tower") then letter = "r"
-                elseif string.find(name, "knight") or string.find(name, "horse") then letter = "n"
-                elseif string.find(name, "bishop") then letter = "b"
-                elseif string.find(name, "queen") then letter = "q"
-                elseif string.find(name, "king") then letter = "k" end
-                
-                -- Determine team coloration via standard property tags
-                local isWhite = modelPiece:FindFirstChild("White") or string.find(name, "white")
-                currentRowText = currentRowText .. (isWhite and string.upper(letter) or letter)
+                local letter = piece_map[piece.Name] or "p"
+                currentRowText = currentRowText .. (piece.team and string.upper(letter) or letter)
             else
                 emptyCount = emptyCount + 1
             end
@@ -223,14 +219,15 @@ local function generateLiveCookieFEN()
         if emptyCount > 0 then currentRowText = currentRowText .. tostring(emptyCount) end
         table.insert(fenRows, currentRowText)
     end
-    return table.concat(fenRows, "/") .. " w KQkq - 0 1"
+    local turn = current_board.activeTeam and "w" or "b"
+    return table.concat(fenRows, "/") .. " " .. turn .. " KQkq - 0 1"
 end
 
-local function executeAutonomousMove(fromSquare, toSquare)
+local function executeAutonomousMove(fromX, fromY, toX, toY)
     local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") or game:GetService("ReplicatedStorage")
     local moveEvent = remotes:FindFirstChild("MovePiece") or remotes:FindFirstChild("SubmitMove")
     if moveEvent and moveEvent:IsA("RemoteEvent") then
-        moveEvent:FireServer(fromSquare, toSquare)
+        moveEvent:FireServer(fromX, fromY, toX, toY)
     end
 end
 
@@ -244,33 +241,43 @@ local function getStockfishAdvice(fen, targetDepth)
     return "API Connection Error"
 end
 
+-- Calculation Pipeline Thread
 ActionButton.MouseButton1Click:Connect(function()
     clearOldHighlights()
-    MoveDisplay.Text = "Scanning Board Matrix..."
-    task.wait(0.5)
-    
     local currentPosition = generateLiveCookieFEN()
     local chosenDepth = levels[currentLevelIdx].depth
     
+    if not currentPosition then
+        MoveDisplay.Text = "Error: Stand inside table"
+        return
+    end
+    
     if safetyDelayEnabled then
         local delayTime = math.random(3, 4)
-        MoveDisplay.Text = "Evaluating (" .. delayTime .. "s)..."
+        MoveDisplay.Text = "Syncing Grid (" .. delayTime .. "s)..."
         task.wait(delayTime)
+    else
+        MoveDisplay.Text = "Hooking Memory..."
     end
     
     local recommendedMove = getStockfishAdvice(currentPosition, chosenDepth)
-    if recommendedMove and #recommendedMove >= 4 and not string.find(recommendedMove, "Error") and not string.find(recommendedMove, "API") then
-        local fromSquare = string.sub(recommendedMove, 1, 2)
-        local toSquare = string.sub(recommendedMove, 3, 4)
+    if recommendedMove and #recommendedMove >= 4 and not string.find(recommendedMove, "Error") then
+        -- Translates standard algebraic engine positions back to Cookie's custom array points
+        local files = {a=8, b=7, c=6, d=5, e=4, f=3, g=2, h=1}
+        local fromX = files[string.sub(recommendedMove, 1, 1)]
+        local fromY = tonumber(string.sub(recommendedMove, 2, 2))
+        local toX = files[string.sub(recommendedMove, 3, 3)]
+        local toY = tonumber(string.sub(recommendedMove, 4, 4))
         
-        MoveDisplay.Text = "Move: " .. string.upper(fromSquare) .. " ➔ " .. string.upper(toSquare)
+        MoveDisplay.Text = "Move: " .. string.upper(string.sub(recommendedMove,1,2)) .. " ➔ " .. string.upper(string.sub(recommendedMove,3,4))
+        
         if autoMoveEnabled then
-            executeAutonomousMove(fromSquare, toSquare)
+            executeAutonomousMove(fromX, fromY, toX, toY)
         else
-            applyVisualHighlight(fromSquare, Color3.fromRGB(255, 140, 0))
-            applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 100))
+            applyVisualHighlight(fromX, fromY, Color3.fromRGB(255, 140, 0)) -- Deep Orange Indicator
+            applyVisualHighlight(toX, toY, Color3.fromRGB(0, 255, 100))   -- Bright Green Destination
         end
     else
-        MoveDisplay.Text = "Calculation Fault"
+        MoveDisplay.Text = "Calculation Fail"
     end
 end)
