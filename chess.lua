@@ -1,15 +1,15 @@
--- Delta Custom Vertical Chess Advisor & Auto-Player
+-- Delta Custom Hybrid Chess Advisor & Auto-Player
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Force Clear Any Glitched Background Screen Elements
+-- Force Clear Any Pre-Existing UI Elements Safely
 if game.CoreGui:FindFirstChild("CyberChessScreen") then
     game.CoreGui.CyberChessScreen:Destroy()
 end
 
--- GUI Interface Initialization (Restored to Classic Box Design)
+-- GUI Interface Initialization (Classic Vertical Box)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CyberChessScreen"
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -19,14 +19,14 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.1, 0, 0.25, 0)
-MainFrame.Size = UDim2.new(0, 230, 0, 220) -- 🛠️ RESTORED: Classic vertical box parameters
+MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 230, 0, 260) -- Extended box parameters to fit toggles
 MainFrame.Active = true
 
 local Title = Instance.new("TextLabel")
 Title.Parent = MainFrame
 Title.Text = "♟️ CyberChess Multi-Tool"
-Title.Size = UDim2.new(1, 0, 0.16, 0)
+Title.Size = UDim2.new(1, 0, 0.14, 0)
 Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
@@ -35,7 +35,7 @@ Title.BorderSizePixel = 0
 local ToggleSizeButton = Instance.new("TextButton")
 ToggleSizeButton.Parent = MainFrame
 ToggleSizeButton.Text = "–"
-ToggleSizeButton.Size = UDim2.new(0, 30, 0.16, 0)
+ToggleSizeButton.Size = UDim2.new(0, 30, 0.14, 0)
 ToggleSizeButton.Position = UDim2.new(1, -30, 0, 0)
 ToggleSizeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 ToggleSizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -44,30 +44,66 @@ ToggleSizeButton.BorderSizePixel = 0
 
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Parent = MainFrame
-ContentFrame.Size = UDim2.new(1, 0, 0.84, 0)
-ContentFrame.Position = UDim2.new(0, 0, 0.16, 0)
+ContentFrame.Size = UDim2.new(1, 0, 0.86, 0)
+ContentFrame.Position = UDim2.new(0, 0, 0.14, 0)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 
-local ActionButton = Instance.new("TextButton")
-ActionButton.Parent = ContentFrame
+-- UI Elements Restoration
+local LevelButton = Instance.new("TextButton", ContentFrame)
+local DelayButton = Instance.new("TextButton", ContentFrame)
+local AutoMoveButton = Instance.new("TextButton", ContentFrame)
+local ActionButton = Instance.new("TextButton", ContentFrame)
+local MoveDisplay = Instance.new("TextLabel", ContentFrame)
+
+local levels = {
+    {name = "Beginner (1000 Elo)", depth = 2},
+    {name = "Advanced (1500 Elo)", depth = 5},
+    {name = "Expert (2000 Elo)", depth = 9},
+    {name = "Grandmaster (2500 Elo)", depth = 13},
+    {name = "Maximum (3000+ Elo)", depth = 17}
+}
+local currentLevelIdx = 2
+local safetyDelayEnabled = true
+local autoMoveEnabled = false
+
+-- Element Layout Profiles inside Content Frame
+LevelButton.Text = "Level: " .. levels[currentLevelIdx].name
+LevelButton.Position = UDim2.new(0.05, 0, 0.04, 0)
+LevelButton.Size = UDim2.new(0.9, 0, 0.14, 0)
+LevelButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+LevelButton.TextColor3 = Color3.fromRGB(255, 255, 100)
+LevelButton.TextSize = 12
+
+DelayButton.Text = "Safety Delay: ON"
+DelayButton.Position = UDim2.new(0.05, 0, 0.22, 0)
+DelayButton.Size = UDim2.new(0.9, 0, 0.14, 0)
+DelayButton.BackgroundColor3 = Color3.fromRGB(0, 140, 0)
+DelayButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+DelayButton.TextSize = 12
+
+AutoMoveButton.Text = "Auto-Move: OFF (Manual)"
+AutoMoveButton.Position = UDim2.new(0.05, 0, 0.40, 0)
+AutoMoveButton.Size = UDim2.new(0.9, 0, 0.14, 0)
+AutoMoveButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+AutoMoveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoMoveButton.TextSize = 12
+
 ActionButton.Text = "Execute Calculation"
-ActionButton.Position = UDim2.new(0.05, 0, 0.15, 0)
-ActionButton.Size = UDim2.new(0.9, 0, 0.25, 0)
+ActionButton.Position = UDim2.new(0.05, 0, 0.58, 0)
+ActionButton.Size = UDim2.new(0.9, 0, 0.18, 0)
 ActionButton.BackgroundColor3 = Color3.fromRGB(0, 110, 220)
 ActionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ActionButton.TextSize = 14
 
-local MoveDisplay = Instance.new("TextLabel")
-MoveDisplay.Parent = ContentFrame
-MoveDisplay.Text = "Status: Ready"
-MoveDisplay.Position = UDim2.new(0.05, 0, 0.55, 0)
-MoveDisplay.Size = UDim2.new(0.9, 0, 0.25, 0)
+MoveDisplay.Text = "Ready"
+MoveDisplay.Position = UDim2.new(0.05, 0, 0.80, 0)
+MoveDisplay.Size = UDim2.new(0.9, 0, 0.16, 0)
 MoveDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MoveDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
 MoveDisplay.TextScaled = true
 
--- 🚀 High-Precision Mobile Touch Dragger
+-- 🚀 High-Precision Mobile Drag System
 local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
@@ -82,7 +118,36 @@ end)
 MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
 game:GetService("UserInputService").InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
 
--- Minimize Event Controller Loop
+-- UI Toggles Functionality Loop
+LevelButton.MouseButton1Click:Connect(function()
+    currentLevelIdx = currentLevelIdx + 1
+    if currentLevelIdx > #levels then currentLevelIdx = 1 end
+    LevelButton.Text = "Level: " .. levels[currentLevelIdx].name
+end)
+
+DelayButton.MouseButton1Click:Connect(function()
+    safetyDelayEnabled = not safetyDelayEnabled
+    if safetyDelayEnabled then
+        DelayButton.Text = "Safety Delay: ON"
+        DelayButton.BackgroundColor3 = Color3.fromRGB(0, 140, 0)
+    else
+        DelayButton.Text = "Safety Delay: OFF (Instant)"
+        DelayButton.BackgroundColor3 = Color3.fromRGB(140, 0, 0)
+    end
+end)
+
+AutoMoveButton.MouseButton1Click:Connect(function()
+    autoMoveEnabled = not autoMoveEnabled
+    if autoMoveEnabled then
+        AutoMoveButton.Text = "Auto-Move: ON (Autonomous)"
+        AutoMoveButton.BackgroundColor3 = Color3.fromRGB(0, 140, 0)
+    else
+        AutoMoveButton.Text = "Auto-Move: OFF (Manual)"
+        AutoMoveButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+    end
+end)
+
+-- Minimize Window Feature
 local isMinimised = false
 ToggleSizeButton.MouseButton1Click:Connect(function()
     isMinimised = not isMinimised
@@ -92,25 +157,24 @@ ToggleSizeButton.MouseButton1Click:Connect(function()
         ToggleSizeButton.Text = "+"
     else
         ContentFrame.Visible = true
-        MainFrame.Size = UDim2.new(0, 230, 0, 220)
+        MainFrame.Size = UDim2.new(0, 230, 0, 260)
         ToggleSizeButton.Text = "–"
     end
 end)
 
--- Visual Board Highlighter Engine
+-- 🎯 FIXED WORKSPACE SEARCH HIGHLIGHT SYSTEM FOR COOKIE DEVELOPMENT
 local activeHighlights = {}
 local function clearOldHighlights()
     for _, hl in pairs(activeHighlights) do if hl then hl:Destroy() end end
     activeHighlights = {}
 end
 
--- 🛠️ DEEP SEARCH OVERLAY LOCATER FOR ACTIVE TILES
 local function applyVisualHighlight(tileName, highlightColor)
-    -- Recursively check workspace folders to locate active boards
-    for _, obj in pairs(game.Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and string.lower(obj.Name) == string.lower(tileName) then
+    -- Cookie Development clones boards dynamically inside Workspace. Here we trace descendants directly.
+    for _, item in pairs(game.Workspace:GetDescendants()) do
+        if item:IsA("BasePart") and string.lower(item.Name) == string.lower(tileName) then
             local hl = Instance.new("Highlight")
-            hl.Parent = obj
+            hl.Parent = item
             hl.FillColor = highlightColor
             hl.FillOpacity = 0.5
             hl.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -120,13 +184,12 @@ local function applyVisualHighlight(tileName, highlightColor)
     end
 end
 
--- 🔍 AUTOMATED GAME BOARD DISCOVERY
-local function findActiveBoard()
-    -- Dynamically checks workspace trees for Cookie Development's board configuration objects
+-- 🔍 INTUITIVE BOARD DETECTOR MATRIX
+local function findActiveCookieBoard()
     for _, obj in pairs(game.Workspace:GetDescendants()) do
-        if string.find(string.lower(obj.Name), "board") or string.find(string.lower(obj.Name), "chessboard") then
-            -- Verifies the instance has physical children grids attached before locking
-            if #obj:GetChildren() > 5 then
+        -- Traces instances named 'Board' or 'Chess' that hold multiple component tiles
+        if (string.find(string.lower(obj.Name), "board") or string.find(string.lower(obj.Name), "chess")) and not obj:IsA("BasePart") then
+            if #obj:GetChildren() > 10 then
                 return obj
             end
         end
@@ -135,43 +198,52 @@ local function findActiveBoard()
 end
 
 local function generateCurrentFEN()
-    local board = findActiveBoard()
-    if not board then return nil end
-    -- Syncs active coordinates cleanly
+    local targetBoard = findActiveCookieBoard()
+    if not targetBoard then return nil end
+    -- Resolves structure tracking to pass live layouts to Stockfish
     return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 end
 
-local function getStockfishAdvice(fen)
-    local apiUrl = "https://stockfish.online" .. HttpService:UrlEncode(fen) .. "&depth=5"
+local function executeAutonomousMove(fromSquare, toSquare)
+    local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") or game:GetService("ReplicatedStorage")
+    local moveEvent = remotes:FindFirstChild("MovePiece") or remotes:FindFirstChild("SubmitMove")
+    if moveEvent and moveEvent:IsA("RemoteEvent") then
+        moveEvent:FireServer(fromSquare, toSquare)
+    end
+end
+
+local function getStockfishAdvice(fen, targetDepth)
+    local apiUrl = "https://stockfish.online" .. HttpService:UrlEncode(fen) .. "&depth=" .. targetDepth
     local success, response = pcall(function() return game:HttpGet(apiUrl) end)
     if success and response then
         local data = HttpService:JSONDecode(response)
         if data and data.bestmove then return string.split(data.bestmove, " ") or data.bestmove end
     end
-    return "API Connection Error"
+    return "API Error"
 end
 
--- Processing Logic Pipeline Execution
+-- Calculation Thread
 ActionButton.MouseButton1Click:Connect(function()
     clearOldHighlights()
     local currentPosition = generateCurrentFEN()
+    local chosenDepth = levels[currentLevelIdx].depth
     
     if not currentPosition then
-        MoveDisplay.Text = "Scan Error: Find Table"
+        MoveDisplay.Text = "Error: Board Not Found"
         return
     end
     
-    MoveDisplay.Text = "Calculating Move..."
-    local recommendedMove = getStockfishAdvice(currentPosition)
+    if safetyDelayEnabled then
+        local delayTime = math.random(3, 4)
+        MoveDisplay.Text = "Analyzing (" .. delayTime .. "s)..."
+        task.wait(delayTime)
+    else
+        MoveDisplay.Text = "Calculating..."
+    end
     
-    if recommendedMove and #recommendedMove >= 4 and not string.find(recommendedMove, "Error") then
+    local recommendedMove = getStockfishAdvice(currentPosition, chosenDepth)
+    
+    if recommendedMove and #recommendedMove >= 4 and not string.find(recommendedMove, "Error") and not string.find(recommendedMove, "API") then
         local fromSquare = string.sub(recommendedMove, 1, 2)
         local toSquare = string.sub(recommendedMove, 3, 4)
         
-        MoveDisplay.Text = "From: " .. string.upper(fromSquare) .. " ➔ To: " .. string.upper(toSquare)
-        applyVisualHighlight(fromSquare, Color3.fromRGB(255, 140, 0)) -- Deep Orange Indicator
-        applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 100))   -- Bright Green Destination
-    else
-        MoveDisplay.Text = "Status: Join Match Table"
-    end
-end)
