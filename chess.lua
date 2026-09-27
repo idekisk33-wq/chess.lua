@@ -1,3 +1,4 @@
+-- Delta Custom Hybrid Chess Advisor & Auto-Player (Side-Bar Layout)
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
@@ -90,7 +91,7 @@ MoveDisplay.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MoveDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
 MoveDisplay.TextScaled = true
 
--- Dragging Engine
+-- Dragging Engine Calculations
 local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
@@ -105,6 +106,7 @@ end)
 MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
 UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
 
+-- Minimize Event Trigger
 local isMinimised = false
 ToggleSizeButton.MouseButton1Click:Connect(function()
     isMinimised = not isMinimised
@@ -153,7 +155,6 @@ AutoMoveButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- 🎯 FIXED TILE HIGHLIGHT ENGINE FOR COOKIE DEVELOPMENT CHESS
 local activeHighlights = {}
 local function clearOldHighlights()
     for _, hl in pairs(activeHighlights) do if hl then hl:Destroy() end end
@@ -161,9 +162,7 @@ local function clearOldHighlights()
 end
 
 local function applyVisualHighlight(tileName, highlightColor)
-    -- Cookie Development stores workspace components uniquely within dynamic workspace hierarchies
     local matchGrid = game.Workspace:FindFirstChild("Board") or game.Workspace:FindFirstChild("ChessBoard") or game.Workspace
-    
     for _, descendant in pairs(matchGrid:GetDescendants()) do
         if descendant:IsA("BasePart") and string.lower(descendant.Name) == string.lower(tileName) then
             local hl = Instance.new("Highlight")
@@ -177,18 +176,13 @@ local function applyVisualHighlight(tileName, highlightColor)
     end
 end
 
--- 🛠️ ACTIVE MATRIX BOARD SCANNER
 local function generateCurrentFEN()
-    -- Dynamically analyzes active piece coordinates to map board spaces accurately
     local matchGrid = game.Workspace:FindFirstChild("Board") or game.Workspace:FindFirstChild("ChessBoard")
     if not matchGrid then return nil end
-    
-    -- Traces match states locally; falls back to standard profile if sync is processing
     return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 end
 
 local function executeAutonomousMove(fromSquare, toSquare)
-    -- Directly hooks into the active remote handlers
     local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") or game:GetService("ReplicatedStorage")
     local moveEvent = remotes:FindFirstChild("MovePiece") or remotes:FindFirstChild("SubmitMove")
     if moveEvent and moveEvent:IsA("RemoteEvent") then
@@ -235,6 +229,10 @@ ActionButton.MouseButton1Click:Connect(function()
         if autoMoveEnabled then
             executeAutonomousMove(fromSquare, toSquare)
         else
-            -- 🎨 Renders local board overlays natively on the match grid parts
-            applyVisualHighlight(fromSquare, Color3.fromRGB(255, 140, 0)) -- Orange Piece Target
-            applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 100))   -- Green Tile Destination
+            applyVisualHighlight(fromSquare, Color3.fromRGB(255, 140, 0))
+            applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 100))
+        end
+    else
+        MoveDisplay.Text = "Sit At Table"
+    end
+end)
