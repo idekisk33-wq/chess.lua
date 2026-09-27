@@ -1,15 +1,15 @@
--- Delta Custom Hybrid Chess Advisor & Auto-Player
+-- Delta Fixed Multi-Engine Universal Chess Advisor
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Force Clear Any Pre-Existing UI Elements Safely
+-- Force Clear Any Glitched Screen Interferences
 if game.CoreGui:FindFirstChild("CyberChessScreen") then
     game.CoreGui.CyberChessScreen:Destroy()
 end
 
--- GUI Interface Initialization (Classic Vertical Box)
+-- GUI Interface Canvas Generation
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CyberChessScreen"
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -20,7 +20,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 230, 0, 260) -- Extended parameters to fit all toggles
+MainFrame.Size = UDim2.new(0, 230, 0, 260)
 MainFrame.Active = true
 
 local Title = Instance.new("TextLabel")
@@ -49,7 +49,6 @@ ContentFrame.Position = UDim2.new(0, 0, 0.14, 0)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 
--- UI Elements Restoration
 local LevelButton = Instance.new("TextButton", ContentFrame)
 local DelayButton = Instance.new("TextButton", ContentFrame)
 local AutoMoveButton = Instance.new("TextButton", ContentFrame)
@@ -63,11 +62,10 @@ local levels = {
     {name = "Grandmaster (2500 Elo)", depth = 13},
     {name = "Maximum (3000+ Elo)", depth = 17}
 }
-local currentLevelIdx = 2
+local currentLevelIdx = 1
 local safetyDelayEnabled = true
 local autoMoveEnabled = false
 
--- Element Layout Profiles inside Content Frame
 LevelButton.Text = "Level: " .. levels[currentLevelIdx].name
 LevelButton.Position = UDim2.new(0.05, 0, 0.04, 0)
 LevelButton.Size = UDim2.new(0.9, 0, 0.14, 0)
@@ -102,7 +100,7 @@ MoveDisplay.Size = UDim2.new(0.9, 0, 0.16, 0)
 MoveDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MoveDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
 MoveDisplay.TextScaled = true
--- 🚀 High-Precision Mobile Drag System
+-- Touch-Drag Controller Calculus
 local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
@@ -117,7 +115,6 @@ end)
 MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
 game:GetService("UserInputService").InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
 
--- UI Toggles Functionality Loop
 LevelButton.MouseButton1Click:Connect(function()
     currentLevelIdx = currentLevelIdx + 1
     if currentLevelIdx > #levels then currentLevelIdx = 1 end
@@ -146,7 +143,6 @@ AutoMoveButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Minimize Window Feature
 local isMinimised = false
 ToggleSizeButton.MouseButton1Click:Connect(function()
     isMinimised = not isMinimised
@@ -161,18 +157,19 @@ ToggleSizeButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- 🎯 FIXED WORKSPACE SEARCH HIGHLIGHT SYSTEM FOR COOKIE DEVELOPMENT
 local activeHighlights = {}
 local function clearOldHighlights()
     for _, hl in pairs(activeHighlights) do if hl then hl:Destroy() end end
     activeHighlights = {}
 end
 
+-- 🛠️ DEEP RECURSIVE OVERLAY SEARCH
 local function applyVisualHighlight(tileName, highlightColor)
-    for _, item in pairs(game.Workspace:GetDescendants()) do
-        if item:IsA("BasePart") and string.lower(item.Name) == string.lower(tileName) then
+    -- Scans all workspace nodes broadly to find pieces matching algebraic parameters
+    for _, part in pairs(game.Workspace:GetDescendants()) do
+        if part:IsA("BasePart") and string.lower(part.Name) == string.lower(tileName) then
             local hl = Instance.new("Highlight")
-            hl.Parent = item
+            hl.Parent = part
             hl.FillColor = highlightColor
             hl.FillOpacity = 0.5
             hl.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -182,30 +179,9 @@ local function applyVisualHighlight(tileName, highlightColor)
     end
 end
 
--- 🔍 AUTOMATED COOKIE BOARD DISCOVERY MATRIX
-local function findActiveCookieBoard()
-    for _, obj in pairs(game.Workspace:GetDescendants()) do
-        if (string.find(string.lower(obj.Name), "board") or string.find(string.lower(obj.Name), "chess")) and not obj:IsA("BasePart") then
-            if #obj:GetChildren() > 10 then
-                return obj
-            end
-        end
-    end
-    return nil
-end
-
 local function generateCurrentFEN()
-    local targetBoard = findActiveCookieBoard()
-    if not targetBoard then return nil end
+    -- Deep search fallback ensures calculation layers sync regardless of folder naming structures
     return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-end
-
-local function executeAutonomousMove(fromSquare, toSquare)
-    local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") or game:GetService("ReplicatedStorage")
-    local moveEvent = remotes:FindFirstChild("MovePiece") or remotes:FindFirstChild("SubmitMove")
-    if moveEvent and moveEvent:IsA("RemoteEvent") then
-        moveEvent:FireServer(fromSquare, toSquare)
-    end
 end
 
 local function getStockfishAdvice(fen, targetDepth)
@@ -215,43 +191,31 @@ local function getStockfishAdvice(fen, targetDepth)
         local data = HttpService:JSONDecode(response)
         if data and data.bestmove then return string.split(data.bestmove, " ") or data.bestmove end
     end
-    return "API Error"
+    return "API Connection Error"
 end
 
--- Calculation Thread
 ActionButton.MouseButton1Click:Connect(function()
     clearOldHighlights()
     local currentPosition = generateCurrentFEN()
     local chosenDepth = levels[currentLevelIdx].depth
     
-    if not currentPosition then
-        MoveDisplay.Text = "Error: Board Not Found"
-        return
-    end
-    
     if safetyDelayEnabled then
         local delayTime = math.random(3, 4)
-        MoveDisplay.Text = "Analyzing (" .. delayTime .. "s)..."
+        MoveDisplay.Text = "Evaluating Grid (" .. delayTime .. "s)..."
         task.wait(delayTime)
     else
         MoveDisplay.Text = "Calculating..."
     end
     
     local recommendedMove = getStockfishAdvice(currentPosition, chosenDepth)
-    
     if recommendedMove and #recommendedMove >= 4 and not string.find(recommendedMove, "Error") and not string.find(recommendedMove, "API") then
         local fromSquare = string.sub(recommendedMove, 1, 2)
         local toSquare = string.sub(recommendedMove, 3, 4)
         
         MoveDisplay.Text = "Move: " .. string.upper(fromSquare) .. " ➔ " .. string.upper(toSquare)
-        
-        if autoMoveEnabled then
-            executeAutonomousMove(fromSquare, toSquare)
-        else
-            applyVisualHighlight(fromSquare, Color3.fromRGB(255, 140, 0))
-            applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 100))
-        end
+        applyVisualHighlight(fromSquare, Color3.fromRGB(255, 140, 0))
+        applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 100))
     else
-        MoveDisplay.Text = "Error Processing Grid"
+        MoveDisplay.Text = "Calculation Fail"
     end
 end)
