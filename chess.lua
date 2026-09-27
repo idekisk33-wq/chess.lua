@@ -1,15 +1,15 @@
--- Delta Fixed Multi-Engine Universal Chess Advisor
+-- Delta Custom Hybrid Chess Advisor & Auto-Player
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Force Clear Any Glitched Screen Interferences
+-- Force Clear Any Pre-Existing UI Elements Safely
 if game.CoreGui:FindFirstChild("CyberChessScreen") then
     game.CoreGui.CyberChessScreen:Destroy()
 end
 
--- GUI Interface Canvas Generation
+-- GUI Interface Initialization (Classic Vertical Box)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CyberChessScreen"
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -20,7 +20,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 230, 0, 260)
+MainFrame.Size = UDim2.new(0, 230, 0, 260) 
 MainFrame.Active = true
 
 local Title = Instance.new("TextLabel")
@@ -100,7 +100,7 @@ MoveDisplay.Size = UDim2.new(0.9, 0, 0.16, 0)
 MoveDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MoveDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
 MoveDisplay.TextScaled = true
--- Touch-Drag Controller Calculus
+-- Touch Dragger Calculus
 local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
@@ -157,30 +157,23 @@ ToggleSizeButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- 🎯 FIXED COOKIE DEVELOPMENT VISUAL CORE OVERLAYS
 local activeHighlights = {}
 local function clearOldHighlights()
-    local board_model = game.Workspace:FindFirstChild("Board")
-    if not board_model then return end
-    for _, v in pairs(board_model:GetChildren()) do
-        for _, h in pairs(v:GetChildren()) do
-            if h:IsA("Highlight") then h:Destroy() end
-        end
-    end
+    for _, hl in pairs(activeHighlights) do if hl then hl:Destroy() end end
+    activeHighlights = {}
 end
 
-local function applyVisualHighlight(xCoord, yCoord, highlightColor)
-    local board_model = game.Workspace:FindFirstChild("Board")
-    if not board_model then return end
-    local tile_name = tostring(xCoord) .. "," .. tostring(yCoord)
-    local target_tile = board_model:FindFirstChild(tile_name)
-    if target_tile then
-        local hl = Instance.new("Highlight")
-        hl.Parent = target_tile
-        hl.FillColor = highlightColor
-        hl.FillOpacity = 0.5
-        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-        hl.OutlineOpacity = 0.9
+local function applyVisualHighlight(tileName, highlightColor)
+    for _, part in pairs(game.Workspace:GetDescendants()) do
+        if part:IsA("BasePart") and string.lower(part.Name) == string.lower(tileName) then
+            local hl = Instance.new("Highlight")
+            hl.Parent = part
+            hl.FillColor = highlightColor
+            hl.FillOpacity = 0.5
+            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+            hl.OutlineOpacity = 0.8
+            table.insert(activeHighlights, hl)
+        end
     end
 end
 
@@ -204,7 +197,7 @@ local function generateLiveCookieFEN()
         local currentRowText = ""
         local emptyCount = 0
         for x = 8, 1, -1 do
-            local piece = current_board.contents[1][x][y]
+            local piece = current_board.contents[x][y]
             if piece then
                 if emptyCount > 0 then
                     currentRowText = currentRowText .. tostring(emptyCount)
@@ -231,14 +224,27 @@ local function executeAutonomousMove(fromX, fromY, toX, toY)
     end
 end
 
+-- 🌐 HIGH-AVAILABILITY MULTI-FALLBACK ENGINE ROUTER
 local function getStockfishAdvice(fen, targetDepth)
-    local apiUrl = "https://stockfish.online" .. HttpService:UrlEncode(fen) .. "&depth=" .. targetDepth
-    local success, response = pcall(function() return game:HttpGet(apiUrl) end)
-    if success and response then
-        local data = HttpService:JSONDecode(response)
+    -- URL 1: Standard PHP engine layout wrapper
+    local url1 = "https://stockfish.online" .. HttpService:UrlEncode(fen) .. "&depth=" .. targetDepth
+    local success1, response1 = pcall(function() return game:HttpGet(url1) end)
+    
+    if success1 and response1 then
+        local data = HttpService:JSONDecode(response1)
         if data and data.bestmove then return string.split(data.bestmove, " ") or data.bestmove end
     end
-    return "API Connection Error"
+    
+    -- URL 2: High-availability fallback alternative server
+    local url2 = "https://stockfish.online" .. HttpService:UrlEncode(fen) .. "&depth=" .. targetDepth
+    local success2, response2 = pcall(function() return game:HttpGet(url2) end)
+    
+    if success2 and response2 then
+        local data = HttpService:JSONDecode(response2)
+        if data and data.bestmove then return string.split(data.bestmove, " ") or data.bestmove end
+    end
+    
+    return "API Error"
 end
 
 -- Calculation Pipeline Thread
@@ -261,8 +267,7 @@ ActionButton.MouseButton1Click:Connect(function()
     end
     
     local recommendedMove = getStockfishAdvice(currentPosition, chosenDepth)
-    if recommendedMove and #recommendedMove >= 4 and not string.find(recommendedMove, "Error") then
-        -- Translates standard algebraic engine positions back to Cookie's custom array points
+    if recommendedMove and #recommendedMove >= 4 and not string.find(recommendedMove, "Error") and not string.find(recommendedMove, "API") then
         local files = {a=8, b=7, c=6, d=5, e=4, f=3, g=2, h=1}
         local fromX = files[string.sub(recommendedMove, 1, 1)]
         local fromY = tonumber(string.sub(recommendedMove, 2, 2))
@@ -274,8 +279,11 @@ ActionButton.MouseButton1Click:Connect(function()
         if autoMoveEnabled then
             executeAutonomousMove(fromX, fromY, toX, toY)
         else
-            applyVisualHighlight(fromX, fromY, Color3.fromRGB(255, 140, 0)) -- Deep Orange Indicator
-            applyVisualHighlight(toX, toY, Color3.fromRGB(0, 255, 100))   -- Bright Green Destination
+            -- Translates Cookie point notation back into physical 3D tile string descriptors
+            local fromName = tostring(fromX) .. "," .. tostring(fromY)
+            local toName = tostring(toX) .. "," .. tostring(toY)
+            applyVisualHighlight(fromName, Color3.fromRGB(255, 140, 0))
+            applyVisualHighlight(toName, Color3.fromRGB(0, 255, 100))
         end
     else
         MoveDisplay.Text = "Calculation Fail"
