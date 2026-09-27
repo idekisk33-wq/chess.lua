@@ -7,11 +7,8 @@ local LocalPlayer = Players.LocalPlayer
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 local MainFrame = Instance.new("Frame", ScreenGui)
 local Title = Instance.new("TextLabel", MainFrame)
-local LevelButton = Instance.new("TextButton", MainFrame)
-local DelayButton = Instance.new("TextButton", MainFrame)
-local AutoMoveButton = Instance.new("TextButton", MainFrame)
-local ActionButton = Instance.new("TextButton", MainFrame)
-local MoveDisplay = Instance.new("TextLabel", MainFrame)
+local ToggleSizeButton = Instance.new("TextButton", MainFrame) -- New Minimize Button
+local ContentFrame = Instance.new("Frame", MainFrame) -- Container for easy hiding
 
 ScreenGui.ResetOnSpawn = false
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -24,6 +21,27 @@ Title.Size = UDim2.new(1, 0, 0.14, 0)
 Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
+
+-- 🛠️ NEW MINIMIZE BUTTON SETUP
+ToggleSizeButton.Text = "–"
+ToggleSizeButton.Size = UDim2.new(0, 30, 1, 0)
+ToggleSizeButton.Position = UDim2.new(1, -30, 0, 0)
+ToggleSizeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ToggleSizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleSizeButton.TextSize = 18
+
+-- Content Container Frame (Holds buttons below the title bar)
+ContentFrame.Size = UDim2.new(1, 0, 0.86, 0)
+ContentFrame.Position = UDim2.new(0, 0, 0.14, 0)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.BorderSizePixel = 0
+
+-- Attach all buttons inside the Content Container
+local LevelButton = Instance.new("TextButton", ContentFrame)
+local DelayButton = Instance.new("TextButton", ContentFrame)
+local AutoMoveButton = Instance.new("TextButton", ContentFrame)
+local ActionButton = Instance.new("TextButton", ContentFrame)
+local MoveDisplay = Instance.new("TextLabel", ContentFrame)
 
 -- Difficulty Levels Setup
 local levels = {
@@ -38,34 +56,34 @@ local currentLevelIdx = 1
 local safetyDelayEnabled = true
 local autoMoveEnabled = false
 
--- Button Layout Profiles
+-- Button Layout Profiles (Adjusted to sit inside ContentFrame)
 LevelButton.Text = "Level: " .. levels[currentLevelIdx].name
-LevelButton.Position = UDim2.new(0.05, 0, 0.16, 0)
-LevelButton.Size = UDim2.new(0.9, 0, 0.13, 0)
+LevelButton.Position = UDim2.new(0.05, 0, 0.05, 0)
+LevelButton.Size = UDim2.new(0.9, 0, 0.15, 0)
 LevelButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 LevelButton.TextColor3 = Color3.fromRGB(255, 255, 100)
 
 DelayButton.Text = "Safety Delay: ON"
-DelayButton.Position = UDim2.new(0.05, 0, 0.31, 0)
-DelayButton.Size = UDim2.new(0.9, 0, 0.13, 0)
+DelayButton.Position = UDim2.new(0.05, 0, 0.23, 0)
+DelayButton.Size = UDim2.new(0.9, 0, 0.15, 0)
 DelayButton.BackgroundColor3 = Color3.fromRGB(0, 140, 0)
 DelayButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 AutoMoveButton.Text = "Auto-Move: OFF (Manual)"
-AutoMoveButton.Position = UDim2.new(0.05, 0, 0.46, 0)
-AutoMoveButton.Size = UDim2.new(0.9, 0, 0.13, 0)
+AutoMoveButton.Position = UDim2.new(0.05, 0, 0.41, 0)
+AutoMoveButton.Size = UDim2.new(0.9, 0, 0.15, 0)
 AutoMoveButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
 AutoMoveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 ActionButton.Text = "Execute Calculation"
-ActionButton.Position = UDim2.new(0.05, 0, 0.62, 0)
-ActionButton.Size = UDim2.new(0.9, 0, 0.15, 0)
+ActionButton.Position = UDim2.new(0.05, 0, 0.60, 0)
+ActionButton.Size = UDim2.new(0.9, 0, 0.17, 0)
 ActionButton.BackgroundColor3 = Color3.fromRGB(0, 110, 220)
 ActionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 MoveDisplay.Text = "Ready"
-MoveDisplay.Position = UDim2.new(0.05, 0, 0.80, 0)
-MoveDisplay.Size = UDim2.new(0.9, 0, 0.14, 0)
+MoveDisplay.Position = UDim2.new(0.05, 0, 0.81, 0)
+MoveDisplay.Size = UDim2.new(0.9, 0, 0.15, 0)
 MoveDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MoveDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
 
@@ -83,6 +101,21 @@ MainFrame.InputBegan:Connect(function(input)
 end)
 MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
 UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
+
+-- 🔄 MINIMIZE / COMPRESS FUNCTIONALITY
+local isMinimised = false
+ToggleSizeButton.MouseButton1Click:Connect(function()
+    isMinimised = not isMinimised
+    if isMinimised then
+        ContentFrame.Visible = false
+        MainFrame.Size = UDim2.new(0, 230, 0, 36) -- Collapse window down to just title bar size
+        ToggleSizeButton.Text = "+"
+    else
+        ContentFrame.Visible = true
+        MainFrame.Size = UDim2.new(0, 230, 0, 260) -- Expand back to normal full size
+        ToggleSizeButton.Text = "–"
+    end
+end)
 
 -- UI Interaction Toggles
 LevelButton.MouseButton1Click:Connect(function()
@@ -139,12 +172,10 @@ end
 
 -- 🛠️ FRAMEWORK FOR BOARD INTERACTION & SCANNING
 local function generateCurrentFEN()
-    -- This maps the active physical matrix into chess data format
     return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 end
 
 local function executeAutonomousMove(fromSquare, toSquare)
-    -- This handles interacting directly with game engine network remotes if Auto-Move is checked
     local chessRemotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") or game:GetService("ReplicatedStorage")
     local moveRemote = chessRemotes:FindFirstChild("SubmitMove") or chessRemotes:FindFirstChild("MovePiece")
     if moveRemote then
@@ -186,12 +217,10 @@ ActionButton.MouseButton1Click:Connect(function()
         MoveDisplay.Text = "Move: " .. string.upper(fromSquare) .. " ➔ " .. string.upper(toSquare)
         
         if autoMoveEnabled then
-            -- Bypass highlights and trigger autonomous board movement via network remote
             executeAutonomousMove(fromSquare, toSquare)
         else
-            -- Run Visual Mode: Highlight pieces safely on your device screen only
-            applyVisualHighlight(fromSquare, Color3.fromRGB(255, 165, 0)) -- Orange Piece Target
-            applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 0))    -- Green Tile Destination
+            applyVisualHighlight(fromSquare, Color3.fromRGB(255, 165, 0))
+            applyVisualHighlight(toSquare, Color3.fromRGB(0, 255, 0))
         end
     else
         MoveDisplay.Text = "Result: " .. recommendedMove
