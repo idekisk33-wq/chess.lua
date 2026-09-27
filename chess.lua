@@ -5,19 +5,20 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- GUI Interface Initialization (Compact Landscape Banner)
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-local MainFrame = Instance.new("Frame", ScreenGui)
-local Title = Instance.new("TextLabel", MainFrame)
-local ToggleSizeButton = Instance.new("TextButton", MainFrame)
-local ContentFrame = Instance.new("Frame", MainFrame)
-
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.05, 0, 0.02, 0)
 MainFrame.Size = UDim2.new(0, 520, 0, 85)
 MainFrame.Active = true
 
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
 Title.Text = "♟️ CyberChess Side-Tool"
 Title.Size = UDim2.new(0.85, 0, 0.3, 0)
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
@@ -25,6 +26,8 @@ Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 13
 Title.BorderSizePixel = 0
 
+local ToggleSizeButton = Instance.new("TextButton")
+ToggleSizeButton.Parent = MainFrame
 ToggleSizeButton.Text = "–"
 ToggleSizeButton.Size = UDim2.new(0.15, 0, 0.3, 0)
 ToggleSizeButton.Position = UDim2.new(0.85, 0, 0, 0)
@@ -33,16 +36,27 @@ ToggleSizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleSizeButton.TextSize = 14
 ToggleSizeButton.BorderSizePixel = 0
 
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Parent = MainFrame
 ContentFrame.Size = UDim2.new(1, 0, 0.7, 0)
 ContentFrame.Position = UDim2.new(0, 0, 0.3, 0)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 
-local LevelButton = Instance.new("TextButton", ContentFrame)
-local DelayButton = Instance.new("TextButton", ContentFrame)
-local AutoMoveButton = Instance.new("TextButton", ContentFrame)
-local ActionButton = Instance.new("TextButton", ContentFrame)
-local MoveDisplay = Instance.new("TextLabel", ContentFrame)
+local LevelButton = Instance.new("TextButton")
+LevelButton.Parent = ContentFrame
+
+local DelayButton = Instance.new("TextButton")
+DelayButton.Parent = ContentFrame
+
+local AutoMoveButton = Instance.new("TextButton")
+AutoMoveButton.Parent = ContentFrame
+
+local ActionButton = Instance.new("TextButton")
+ActionButton.Parent = ContentFrame
+
+local MoveDisplay = Instance.new("TextLabel")
+MoveDisplay.Parent = ContentFrame
 
 local levels = {
     {name = "Beginner (1000)", depth = 2},
@@ -91,7 +105,7 @@ MoveDisplay.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MoveDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
 MoveDisplay.TextScaled = true
 
--- Dragging Engine Calculations
+-- Dragging Core Configuration
 local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
@@ -106,7 +120,7 @@ end)
 MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
 UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
 
--- Minimize Event Trigger
+-- Minimize Controller Loop
 local isMinimised = false
 ToggleSizeButton.MouseButton1Click:Connect(function()
     isMinimised = not isMinimised
